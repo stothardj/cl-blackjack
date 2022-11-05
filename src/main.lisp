@@ -61,7 +61,7 @@
                (if (> player-value 21)
                    (format t "Player busts.~%")
                    (format t "~%"))
-               (return player-value)))))
+               (return (list :cards player :value player-value))))))
 
 (defun play-hand-dealer (deck player dealer)
   (iter
@@ -72,10 +72,11 @@
     (while (< (hand-value dealer) 17))
     (format t "Dealer hits.~%~%")
     (push (pop deck) dealer)
-    (finally (if (> (hand-value dealer) 21)
-                 (format t "Dealer busts.~%")
-                 (format t "Dealer stays.~%"))
-             (return (hand-value dealer)))))
+    (finally (let ((dealer-value (hand-value dealer)))
+               (if (> dealer-value 21)
+                   (format t "Dealer busts.~%")
+                   (format t "Dealer stays.~%"))
+               (return (list :cards dealer :value dealer-value))))))
 
 (defun display-winner (winner)
   (format t "~a~%"
@@ -84,14 +85,17 @@
             (:dealer "Dealer wins.")
             (:tie "It's a tie."))))
 
-;; TODO: Changes to "player" are lost when play-hand-player returns.
 (defun play-hand (deck)
   (let* ((player (list (pop deck) (pop deck)))
          (dealer (list (pop deck) (pop deck)))
-         (player-value (play-hand-player deck player dealer)))
+         (player-results (play-hand-player deck player dealer))
+         (player-value (getf player-results :value))
+         (player (getf player-results :cards)))
     (if (> player-value 21)
         (list :winner :dealer)
-        (let ((dealer-value (play-hand-dealer deck player dealer)))
+        (let* ((dealer-results (play-hand-dealer deck player dealer))
+               (dealer-value (getf dealer-results :value))
+               (dealer (getf dealer-results :cards)))
           (cond ((> dealer-value 21) (list :winner :player))
                 ((and (= dealer-value 21) (= player-value 21)
                       (= 2 (length player)) (> 2 (length dealer)))
