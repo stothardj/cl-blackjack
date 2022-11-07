@@ -114,5 +114,6 @@
           (list :winner (determine-winner player dealer))))))
 
 (defun play-game ()
-  (let ((results (play-hand (alexandria:shuffle (make-deck)))))
+  (let* ((*random-state* (make-random-state t))
+         (results (play-hand (alexandria:shuffle (make-deck)))))
     (display-winner (getf results :winner))))
