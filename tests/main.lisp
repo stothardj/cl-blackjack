@@ -10,6 +10,11 @@
   (make-two-way-stream (make-string-input-stream (format nil pattern))
                        (make-broadcast-stream)))
 
+(defmacro with-fake-query-io (input &rest body)
+  `(let ((*query-io* (fake-query-io-stream ,input))
+         (*standard-output* (make-broadcast-stream)))
+     ,@body))
+
 (deftest test-make-deck
   (testing "has 52 cards"
     (ok (= (length (blackjack:make-deck)) 52)))
@@ -83,10 +88,17 @@
 ;; This relies on the player getting both their cards first.
 (deftest test-play-hand
   (testing "both stay player wins"
-    (ok (eql :player (getf (let ((*query-io* (fake-query-io-stream "s~%"))
-                                 (*standard-output* (make-broadcast-stream)))
-                             (blackjack:play-hand (list (blackjack:make-card 10 :hearts)
-                                                        (blackjack:make-card :jack :clubs)
+    (ok (eql :player (getf (with-fake-query-io "s~%"
+                         (blackjack:play-hand (list (blackjack:make-card 10 :hearts)
+                                                    (blackjack:make-card :jack :clubs)
+                                                    (blackjack:make-card 10 :spades)
+                                                    (blackjack:make-card 8 :spades))))
+                           :winner))))
+  (testing "player hits to get win"
+    (ok (eql :player (getf (with-fake-query-io "h~%s~%"
+                             (blackjack:play-hand (list (blackjack:make-card 5 :hearts)
+                                                        (blackjack:make-card 4 :hearts)
                                                         (blackjack:make-card 10 :spades)
-                                                        (blackjack:make-card 8 :spades))))
+                                                        (blackjack:make-card 8 :spades)
+                                                        (blackjack:make-card :king :hearts))))
                            :winner)))))
